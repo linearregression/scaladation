@@ -19,6 +19,19 @@ trait Applicative[F[_]] extends Functor[F] {
   def ap[A,B](ff: F[A => B])(fa: F[A]): F[B]
 }
 
+object Applicative {
+
+  implicit class FnCofunctor[A,B](f: A => B) {
+    def <%>[F[_]:Applicative](fa: F[A]) =
+      implicitly[Applicative[F]].map(f)(fa)
+  }
+
+  implicit class FnCoapplicative[A,B,F[_]:Applicative](ff: F[A => B]) {
+    def <*>(fa: F[A]) = implicitly[Applicative[F]].ap(ff)(fa)
+  }
+
+}
+
 sealed trait Validation[E,A]
 case class Success[E,A](value: A) extends Validation[E,A]
 case class Failure[E,A](value: E) extends Validation[E,A]
@@ -53,16 +66,6 @@ object Validation {
     def ap[B](ff: Validation[E,A => B]): Validation[E,B] =
       applicative[E].ap(ff)(fa)
   }
-
-  implicit class FnCofunctor[A,B](f: A => B) {
-    def <%>[E:Semigroup](fa: Validation[E,A]) =
-      applicative[E].map(f)(fa)
-  }
-
-  implicit class FnValidationCoapplicative[A,B,E:Semigroup](ff: Validation[E,A => B]) {
-    def <*>(fa: Validation[E,A]) =
-      applicative[E].ap(ff)(fa)
-  }
  
 }
 
@@ -89,8 +92,8 @@ object User {
 
   def parse2(name: String, email: String, phone: String): Parsed[User] = {
 
-    import Validation.FnCofunctor
-    import Validation.FnValidationCoapplicative
+    import Applicative.FnCofunctor
+    import Applicative.FnCoapplicative
 
     (User.apply _).curried <%>
       parseR("name", name, """\w+(\s\w+)*""".r) <*>
