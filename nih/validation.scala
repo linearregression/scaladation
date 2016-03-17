@@ -15,16 +15,19 @@ trait Functor[F[_]] {
   def map[A,B](f: A => B)(fa: F[A]): F[B]
 }
 
+object Functor {
+
+  implicit class FnCofunctor[A,B](f: A => B) {
+    def <%>[F[_]:Functor](fa: F[A]) = implicitly[Functor[F]].map(f)(fa)
+  }
+
+}
+
 trait Applicative[F[_]] extends Functor[F] {
   def ap[A,B](ff: F[A => B])(fa: F[A]): F[B]
 }
 
 object Applicative {
-
-  implicit class FnCofunctor[A,B](f: A => B) {
-    def <%>[F[_]:Applicative](fa: F[A]) =
-      implicitly[Applicative[F]].map(f)(fa)
-  }
 
   implicit class FnCoapplicative[A,B,F[_]:Applicative](ff: F[A => B]) {
     def <*>(fa: F[A]) = implicitly[Applicative[F]].ap(ff)(fa)
@@ -92,7 +95,7 @@ object User {
 
   def parse2(name: String, email: String, phone: String): Parsed[User] = {
 
-    import Applicative.FnCofunctor
+    import Functor.FnCofunctor
     import Applicative.FnCoapplicative
 
     (User.apply _).curried <%>
