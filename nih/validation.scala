@@ -12,27 +12,23 @@ object Semigroup {
 }
 
 trait Functor[F[_]] {
-  def map[A,B](f: A => B)(fa: F[A]): F[B]
+  def map[A,B](fa: F[A])(f: A => B): F[B]
 }
 
-object Functor {
-
+object Cofunctor {
   implicit class FnCofunctor[A,B](f: A => B) {
-    def <%>[F[_]:Functor](fa: F[A]) = implicitly[Functor[F]].map(f)(fa)
+    def <%>[F[_]:Functor](fa: F[A]) = implicitly[Functor[F]].map(fa)(f)
   }
-
 }
 
 trait Applicative[F[_]] extends Functor[F] {
   def ap[A,B](ff: F[A => B])(fa: F[A]): F[B]
 }
 
-object Applicative {
-
+object Coapplicative {
   implicit class FnCoapplicative[A,B,F[_]:Applicative](ff: F[A => B]) {
     def <*>(fa: F[A]) = implicitly[Applicative[F]].ap(ff)(fa)
   }
-
 }
 
 sealed trait Validation[E,A]
@@ -43,7 +39,7 @@ object Validation {
 
   implicit def applicative[E:Semigroup]: Applicative[({type λ[α] = Validation[E,α]})#λ] =
     new Applicative[({type λ[α] = Validation[E,α]})#λ] {
-      def map[A,B](f: A => B)(fa: Validation[E,A]): Validation[E,B] =
+      def map[A,B](fa: Validation[E,A])(f: A => B): Validation[E,B] =
         fa match {
           case Success(a)  => Success(f(a))
           case Failure(es) => Failure(es)
@@ -65,7 +61,7 @@ object Validation {
 
   implicit class ValidationOps[E:Semigroup,A](fa: Validation[E,A]) {
     def map[B](f: A => B): Validation[E,B] =
-      applicative[E].map(f)(fa)
+      applicative[E].map(fa)(f)
     def ap[B](ff: Validation[E,A => B]): Validation[E,B] =
       applicative[E].ap(ff)(fa)
   }
@@ -95,8 +91,8 @@ object User {
 
   def parse2(name: String, email: String, phone: String): Parsed[User] = {
 
-    import Functor.FnCofunctor
-    import Applicative.FnCoapplicative
+    import Cofunctor.FnCofunctor
+    import Coapplicative.FnCoapplicative
 
     (User.apply _).curried <%>
       parseR("name", name, """\w+(\s\w+)*""".r) <*>
