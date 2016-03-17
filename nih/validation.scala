@@ -59,7 +59,7 @@ object Validation {
       applicative[E].map(f)(fa)
   }
 
-  implicit class ValidationCofunctor[A,B,E:Semigroup](ff: Validation[E,A => B]) {
+  implicit class FnValidationCoapplicative[A,B,E:Semigroup](ff: Validation[E,A => B]) {
     def <*>(fa: Validation[E,A]) =
       applicative[E].ap(ff)(fa)
   }
@@ -87,13 +87,17 @@ object User {
       )
     )
 
-  import Validation._
+  def parse2(name: String, email: String, phone: String): Parsed[User] = {
 
-  def parse2(name: String, email: String, phone: String): Parsed[User] =
+    import Validation.FnCofunctor
+    import Validation.FnValidationCoapplicative
+
     (User.apply _).curried <%>
       parseR("name", name, """\w+(\s\w+)*""".r) <*>
       parseR("email", email, """[^@]+@[^@]+""".r) <*>
       parseR("phone", phone, """\d{3}-\d{3}-\d{4}""".r)
+
+  }
 
 }
 
