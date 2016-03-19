@@ -22,7 +22,7 @@ object Functor {
 }
 
 object FunctorExtra {
-  implicit class InfixFunctorOps[A,B](f: A => B) {
+  implicit class FlippedFunctorOps[A,B](f: A => B) {
     def <%>[F[_]:Functor](fa: F[A]): F[B] =
       implicitly[Functor[F]].map(fa)(f)
   }
@@ -40,7 +40,7 @@ object Applicative {
 }
 
 object ApplicativeExtra {
-  implicit class InfixApplicativeOps[A,B,F[_]:Applicative](ff: F[A => B]) {
+  implicit class FlippedApplicativeOps[A,B,F[_]:Applicative](ff: F[A => B]) {
     def <*>(fa: F[A]): F[B] = implicitly[Applicative[F]].ap(ff)(fa)
   }
 }
@@ -100,8 +100,8 @@ object User {
       )
     )
 
-  import FunctorExtra.InfixFunctorOps
-  import ApplicativeExtra.InfixApplicativeOps
+  import FunctorExtra.FlippedFunctorOps
+  import ApplicativeExtra.FlippedApplicativeOps
 
   def parse2(name: String, email: String, phone: String): Parsed[User] =
     (User.apply _).curried <%>
