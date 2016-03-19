@@ -59,7 +59,8 @@ object Validation {
           case Success(a)  => Success(f(a))
           case Failure(es) => Failure(es)
         }
-      def ap[A,B](ff: Validation[E,A => B])(fa: Validation[E,A]): Validation[E,B] =
+      def ap[A,B](ff: Validation[E,A => B])
+                 (fa: Validation[E,A]): Validation[E,B] =
         fa match {
           case Success(a) =>
             ff match {
@@ -68,8 +69,9 @@ object Validation {
             }
           case Failure(es) =>
             ff match {
-              case Success(f)  => Failure(es)
-              case Failure(es2) => Failure(implicitly[Semigroup[E]].append(es2)(es))
+              case Success(f)   => Failure(es)
+              case Failure(es2) => val se = implicitly[Semigroup[E]]
+                                   Failure(se.append(es2)(es))
             }
         }
     }
