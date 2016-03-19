@@ -15,9 +15,16 @@ trait Functor[F[_]] {
   def map[A,B](fa: F[A])(f: A => B): F[B]
 }
 
-object Cofunctor {
-  implicit class FnCofunctor[A,B](f: A => B) {
-    def <%>[F[_]:Functor](fa: F[A]) = implicitly[Functor[F]].map(fa)(f)
+object Functor {
+  implicit class FunctorOps[A,F[_]:Functor](fa: F[A]) {
+    def map[B](f: A => B): F[B] = implicitly[Functor[F]].map(fa)(f)
+  }
+}
+
+object FunctorExtra {
+  implicit class InfixFunctorOps[A,B](f: A => B) {
+    def <%>[F[_]:Functor](fa: F[A]): F[B] =
+      implicitly[Functor[F]].map(fa)(f)
   }
 }
 
@@ -25,11 +32,19 @@ trait Applicative[F[_]] extends Functor[F] {
   def ap[A,B](ff: F[A => B])(fa: F[A]): F[B]
 }
 
-object Coapplicative {
-  implicit class FnCoapplicative[A,B,F[_]:Applicative](ff: F[A => B]) {
-    def <*>(fa: F[A]) = implicitly[Applicative[F]].ap(ff)(fa)
+object Applicative {
+  implicit class ApplicativeOps[A,F[_]:Applicative](fa: F[A]) {
+    def ap[B](ff: F[A => B]): F[B] =
+      implicitly[Applicative[F]].ap(ff)(fa)
   }
 }
+
+object ApplicativeExtra {
+  implicit class InfixApplicativeOps[A,B,F[_]:Applicative](ff: F[A => B]) {
+    def <*>(fa: F[A]): F[B] = implicitly[Applicative[F]].ap(ff)(fa)
+  }
+}
+
 
 sealed trait Validation[E,A]
 case class Success[E,A](value: A) extends Validation[E,A]
@@ -59,13 +74,6 @@ object Validation {
         }
     }
 
-  implicit class ValidationOps[E:Semigroup,A](fa: Validation[E,A]) {
-    def map[B](f: A => B): Validation[E,B] =
-      applicative[E].map(fa)(f)
-    def ap[B](ff: Validation[E,A => B]): Validation[E,B] =
-      applicative[E].ap(ff)(fa)
-  }
- 
 }
 
 case class User private (name: String, email: String, phone: String)
@@ -80,6 +88,9 @@ object User {
       case _       => Failure(List(s"""invalid ${n}: "${x}""""))
     }
 
+  import Functor.FunctorOps
+  import Applicative.ApplicativeOps
+
   def parse(name: String, email: String, phone: String): Parsed[User] =
     parseR("name", name, """\w+(\s\w+)*""".r).ap(
       parseR("email", email, """[^@]+@[^@]+""".r).ap(
@@ -89,17 +100,14 @@ object User {
       )
     )
 
-  def parse2(name: String, email: String, phone: String): Parsed[User] = {
+  import FunctorExtra.InfixFunctorOps
+  import ApplicativeExtra.InfixApplicativeOps
 
-    import Cofunctor.FnCofunctor
-    import Coapplicative.FnCoapplicative
-
+  def parse2(name: String, email: String, phone: String): Parsed[User] =
     (User.apply _).curried <%>
       parseR("name", name, """\w+(\s\w+)*""".r) <*>
       parseR("email", email, """[^@]+@[^@]+""".r) <*>
       parseR("phone", phone, """\d{3}-\d{3}-\d{4}""".r)
-
-  }
 
 }
 

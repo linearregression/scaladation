@@ -6,15 +6,16 @@ import scalaz.Functor
 import scalaz.Applicative
 import scala.util.matching.Regex
 
-object Cofunctor {
-  implicit class FnCofunctor[A,B](f: A => B) {
-    def <%>[F[_]:Functor](fa: F[A]) = implicitly[Functor[F]].map(fa)(f)
+object FunctorExtra {
+  implicit class InfixFunctorOps[A,B](f: A => B) {
+    def <%>[F[_]:Functor](fa: F[A]): F[B] =
+      implicitly[Functor[F]].map(fa)(f)
   }
 }
 
-object Coapplicative {
-  implicit class FnCoapplicative[A,B,F[_]:Applicative](ff: F[A => B]) {
-    def <*>(fa: F[A]) = implicitly[Applicative[F]].ap(fa)(ff)
+object ApplicativeExtra {
+  implicit class InfixApplicativeOps[A,B,F[_]:Applicative](ff: F[A => B]) {
+    def <*>(fa: F[A]): F[B] = implicitly[Applicative[F]].ap(fa)(ff)
   }
 }
 
@@ -39,17 +40,14 @@ object User {
       )
     )
 
-  def parse2(name: String, email: String, phone: String): Parsed[User] = {
+  import FunctorExtra.InfixFunctorOps
+  import ApplicativeExtra.InfixApplicativeOps
 
-    import Cofunctor.FnCofunctor
-    import Coapplicative.FnCoapplicative
-
+  def parse2(name: String, email: String, phone: String): Parsed[User] =
     (User.apply _).curried <%>
       parseR("name", name, """\w+(\s\w+)*""".r) <*>
       parseR("email", email, """[^@]+@[^@]+""".r) <*>
       parseR("phone", phone, """\d{3}-\d{3}-\d{4}""".r)
-
-  }
 
 }
 
